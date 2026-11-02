@@ -1,0 +1,17 @@
+# Compiled Executables and Object Files
+*.exe
+*.o
+*.obj
+
+# Python Bytecode and Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment and IDE settings
+.vscode/
+.idea/
+*.swp
+*.bak
+.DS_Store
