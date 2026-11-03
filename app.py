@@ -3,13 +3,17 @@ FILE DEFINITION: app.py
 =============================================================================
 PROJECT TITLE : Student Record Management & Analytics System
 COURSE        : CSET333 - Problem Solving Using C
-SUBSYSTEM     : Localhost Web Deployment & REST API Server
-FRAMEWORK     : Python 3 / Flask
+SUBSYSTEM     : Localhost Web Deployment, Analytics Dashboard & REST API
+FRAMEWORK     : Python 3 / Flask / Chart.js
 
 PURPOSE & DESCRIPTION:
   This file serves the localhost web deployment on http://localhost:5000.
   It provides:
-    1. A responsive, modern Web UI dashboard for student record operations.
+    1. A responsive, modern Web UI dashboard with interactive Chart.js analytics:
+       - Individual student performance bar chart (color-coded PASS/FAIL).
+       - Subject-wise class average marks breakdown across Subjects 1 to 5.
+       - Overall Pass vs. Fail distribution doughnut chart.
+       - Academic grade distribution bracket chart (Distinction, 1st, 2nd, Pass, Fail).
     2. A comprehensive REST API for full CRUD functionality and analytics.
     3. Direct binary interoperability with "students.dat" using Python's struct
        module, matching the exact memory struct layout of student_record_management.c.
@@ -164,7 +168,7 @@ def compute_statistics(students):
 
 
 # =============================================================================
-# FRONTEND HTML / CSS / JS TEMPLATE
+# FRONTEND HTML / CSS / JS TEMPLATE WITH CHART.JS
 # =============================================================================
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -175,6 +179,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Chart.js for Overall Analytics Graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -208,7 +214,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       align-items: center;
       flex-wrap: wrap;
       gap: 16px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
       padding-bottom: 20px;
       border-bottom: 1px solid var(--card-border);
     }
@@ -232,7 +238,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     h1 { font-size: 1.65rem; font-weight: 700; margin-top: 6px; }
     .subtitle { color: var(--text-muted); font-size: 0.9rem; }
 
-    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
     .btn {
       display: inline-flex;
@@ -263,12 +269,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }
     .btn-outline:hover { background: rgba(255,255,255,0.05); color: var(--text); }
 
-    /* STATS GRID */
+    /* STATS KPI GRID */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 16px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
     .stat-card {
       background: var(--card-bg);
@@ -304,6 +310,59 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .stat-card.pass::before { background: var(--success); }
     .stat-card.fail::before { background: var(--danger); }
     .stat-card.purple::before { background: var(--purple); }
+
+    /* OVERALL ANALYTICS GRAPHS SECTION */
+    .section-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .section-heading {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 600px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    .chart-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+    }
+    .chart-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .chart-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .chart-canvas-wrapper {
+      position: relative;
+      height: 250px;
+      width: 100%;
+    }
 
     /* CONTROLS BAR */
     .controls {
@@ -584,7 +643,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       </div>
     </header>
 
-    <!-- CLASS STATS -->
+    <!-- CLASS STATS KPI CARDS -->
     <div class="stats-grid" id="statsGrid">
       <div class="stat-card">
         <div class="label">Total Students</div>
@@ -610,6 +669,59 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div class="label">Pass / Fail</div>
         <div class="value" id="statPassFail">0 / 0</div>
         <div class="subtext" id="statPassRate">Pass criteria: >= 40%</div>
+      </div>
+    </div>
+
+    <!-- OVERALL ANALYTICS GRAPHS SECTION -->
+    <div class="section-title-bar">
+      <div class="section-heading">
+        <span>📊 Overall Analytics & Visual Performance Graphs</span>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <!-- 1. Individual Performance Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Student Overall Scores</div>
+          <div class="chart-subtitle">Percentages with Pass Cutoff (40%)</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="performanceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 2. Subject-wise Class Averages -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Subject-wise Class Average</div>
+          <div class="chart-subtitle">Average marks across Subjects 1 to 5</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="subjectsChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 3. Pass vs. Fail Doughnut Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Pass vs. Fail Distribution</div>
+          <div class="chart-subtitle">Academic outcome comparison</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="passFailChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 4. Academic Grade Distribution -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Grade Bracket Distribution</div>
+          <div class="chart-subtitle">Distinction, 1st Class, 2nd Class, Pass, Fail</div>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="gradeDistChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -696,6 +808,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
   <script>
     let allStudents = [];
+    let currentStats = null;
+
+    // Chart.js references
+    let performanceChart = null;
+    let subjectsChart = null;
+    let passFailChart = null;
+    let gradeDistChart = null;
 
     // Fetch student list with optional sort query
     async function fetchStudents() {
@@ -703,31 +822,223 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       const res = await fetch(`/api/students?sort=${sortVal}`);
       allStudents = await res.json();
       renderTable(allStudents);
-      fetchStats();
+      await fetchStats();
+      renderCharts(allStudents, currentStats);
     }
 
     // Fetch and populate statistical metrics
     async function fetchStats() {
       const res = await fetch('/api/stats');
-      const stats = await res.json();
-      document.getElementById('statCount').innerText = stats.count;
-      document.getElementById('statAvg').innerText = stats.average.toFixed(2) + '%';
-      if (stats.highest) {
-        document.getElementById('statTop').innerText = stats.highest.percentage.toFixed(2) + '%';
-        document.getElementById('statTopDetail').innerText = `#${stats.highest.rollNo} - ${stats.highest.name}`;
+      currentStats = await res.json();
+      document.getElementById('statCount').innerText = currentStats.count;
+      document.getElementById('statAvg').innerText = currentStats.average.toFixed(2) + '%';
+      if (currentStats.highest) {
+        document.getElementById('statTop').innerText = currentStats.highest.percentage.toFixed(2) + '%';
+        document.getElementById('statTopDetail').innerText = `#${currentStats.highest.rollNo} - ${currentStats.highest.name}`;
       } else {
         document.getElementById('statTop').innerText = 'None';
         document.getElementById('statTopDetail').innerText = 'Highest percentage';
       }
-      if (stats.lowest) {
-        document.getElementById('statLow').innerText = stats.lowest.percentage.toFixed(2) + '%';
-        document.getElementById('statLowDetail').innerText = `#${stats.lowest.rollNo} - ${stats.lowest.name}`;
+      if (currentStats.lowest) {
+        document.getElementById('statLow').innerText = currentStats.lowest.percentage.toFixed(2) + '%';
+        document.getElementById('statLowDetail').innerText = `#${currentStats.lowest.rollNo} - ${currentStats.lowest.name}`;
       } else {
         document.getElementById('statLow').innerText = 'None';
         document.getElementById('statLowDetail').innerText = 'Lowest percentage';
       }
-      document.getElementById('statPassFail').innerText = `${stats.passed} / ${stats.failed}`;
-      document.getElementById('statPassRate').innerText = `Pass rate: ${stats.passRate}% (cutoff >= 40%)`;
+      document.getElementById('statPassFail').innerText = `${currentStats.passed} / ${currentStats.failed}`;
+      document.getElementById('statPassRate').innerText = `Pass rate: ${currentStats.passRate}% (cutoff >= 40%)`;
+    }
+
+    // Render Overall Analytics Charts
+    function renderCharts(students, stats) {
+      if (typeof Chart === 'undefined' || !stats) return;
+
+      // 1. Overall Student Performance Chart
+      const perfCanvas = document.getElementById('performanceChart');
+      if (perfCanvas) {
+        if (performanceChart) performanceChart.destroy();
+        const labels = students.map(s => `${s.name} (#${s.rollNo})`);
+        const data = students.map(s => s.percentage);
+        const bgColors = students.map(s => s.percentage >= 40 ? 'rgba(16, 185, 129, 0.75)' : 'rgba(239, 68, 68, 0.75)');
+        const borderColors = students.map(s => s.percentage >= 40 ? '#10b981' : '#ef4444');
+
+        performanceChart = new Chart(perfCanvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Overall %',
+              data: data,
+              backgroundColor: bgColors,
+              borderColor: borderColors,
+              borderWidth: 1.5,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `Score: ${ctx.parsed.y.toFixed(2)}% (${ctx.parsed.y >= 40 ? 'PASS' : 'FAIL'})`
+                }
+              }
+            },
+            scales: {
+              y: {
+                min: 0,
+                max: 100,
+                ticks: { color: '#94a3b8', callback: v => v + '%' },
+                grid: { color: 'rgba(51, 65, 85, 0.4)' }
+              },
+              x: {
+                ticks: { color: '#94a3b8', font: { size: 11 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      // 2. Subject-wise Class Average Chart
+      const subjCanvas = document.getElementById('subjectsChart');
+      if (subjCanvas) {
+        if (subjectsChart) subjectsChart.destroy();
+        const numSubj = 5;
+        const subjAvgs = [];
+        for (let i = 0; i < numSubj; i++) {
+          if (students.length > 0) {
+            const sum = students.reduce((acc, s) => acc + (s.marks[i] || 0), 0);
+            subjAvgs.push(+(sum / students.length).toFixed(2));
+          } else {
+            subjAvgs.push(0);
+          }
+        }
+
+        subjectsChart = new Chart(subjCanvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: ['Subject 1', 'Subject 2', 'Subject 3', 'Subject 4', 'Subject 5'],
+            datasets: [{
+              label: 'Class Avg Marks',
+              data: subjAvgs,
+              backgroundColor: 'rgba(59, 130, 246, 0.7)',
+              borderColor: '#3b82f6',
+              borderWidth: 1.5,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `Class Average: ${ctx.parsed.y} / 100`
+                }
+              }
+            },
+            scales: {
+              y: {
+                min: 0,
+                max: 100,
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(51, 65, 85, 0.4)' }
+              },
+              x: {
+                ticks: { color: '#94a3b8' },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+
+      // 3. Pass vs Fail Distribution Doughnut Chart
+      const pfCanvas = document.getElementById('passFailChart');
+      if (pfCanvas) {
+        if (passFailChart) passFailChart.destroy();
+        passFailChart = new Chart(pfCanvas.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: ['Passed (>= 40%)', 'Failed (< 40%)'],
+            datasets: [{
+              data: [stats.passed, stats.failed],
+              backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(239, 68, 68, 0.8)'],
+              borderColor: ['#10b981', '#ef4444'],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: '#cbd5e1', padding: 14 }
+              }
+            },
+            cutout: '65%'
+          }
+        });
+      }
+
+      // 4. Academic Grade Distribution Bracket Chart
+      const gradeCanvas = document.getElementById('gradeDistChart');
+      if (gradeCanvas) {
+        if (gradeDistChart) gradeDistChart.destroy();
+        const distinction = students.filter(s => s.percentage >= 75).length;
+        const firstClass = students.filter(s => s.percentage >= 60 && s.percentage < 75).length;
+        const secondClass = students.filter(s => s.percentage >= 50 && s.percentage < 60).length;
+        const passClass = students.filter(s => s.percentage >= 40 && s.percentage < 50).length;
+        const failClass = students.filter(s => s.percentage < 40).length;
+
+        gradeDistChart = new Chart(gradeCanvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: ['Distinction (>=75%)', '1st Class (60-74%)', '2nd Class (50-59%)', 'Pass (40-49%)', 'Fail (<40%)'],
+            datasets: [{
+              label: 'Students',
+              data: [distinction, firstClass, secondClass, passClass, failClass],
+              backgroundColor: [
+                'rgba(139, 92, 246, 0.75)',
+                'rgba(59, 130, 246, 0.75)',
+                'rgba(245, 158, 11, 0.75)',
+                'rgba(16, 185, 129, 0.75)',
+                'rgba(239, 68, 68, 0.75)'
+              ],
+              borderColor: ['#8b5cf6', '#3b82f6', '#f59e0b', '#10b981', '#ef4444'],
+              borderWidth: 1.5,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  color: '#94a3b8',
+                  stepSize: 1
+                },
+                grid: { color: 'rgba(51, 65, 85, 0.4)' }
+              },
+              x: {
+                ticks: { color: '#94a3b8', font: { size: 10 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
     }
 
     // Render HTML table rows
