@@ -586,52 +586,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       gap: 10px;
       margin-top: 24px;
     }
-
-    /* TERMINAL DRAWER */
-    .terminal-section {
-      margin-top: 28px;
-      background: #090d16;
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .terminal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #111827;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--card-border);
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
-    .terminal-body {
-      padding: 16px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      color: #38bdf8;
-      white-space: pre-wrap;
-      max-height: 250px;
-      overflow-y: auto;
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <span class="badge">Localhost Active</span>
-          <span class="badge badge-c">CSET333 - Binary Synced</span>
-        </div>
         <h1>Student Record Management & Analytics System</h1>
-        <div class="subtitle">Problem Solving Using C • Local Web Deployment & C Binary Interface</div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="runCBinary()">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 17l6-6-6-6m8 14h8"/></svg>
-          Run C Program
-        </button>
         <button class="btn btn-secondary" onclick="seedSampleData()">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Demo Data
@@ -759,15 +722,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <tr><td colspan="6" class="empty-state">Loading students...</td></tr>
         </tbody>
       </table>
-    </div>
-
-    <!-- C CONSOLE DRAWER -->
-    <div class="terminal-section">
-      <div class="terminal-header">
-        <span>📟 CSET333 C Engine Console Output (`student_record_management.exe`)</span>
-        <span style="font-size: 0.75rem;">Source: student_record_management.c</span>
-      </div>
-      <div class="terminal-body" id="terminalOutput">Click "Run C Program" to execute the compiled C binary and verify its exact terminal output here.</div>
     </div>
   </div>
 
